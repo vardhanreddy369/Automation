@@ -5,10 +5,11 @@ import threading
 import os
 import platform
 import subprocess
+import json
 from datetime import datetime
+from tkinter import filedialog
 
 # Securely import pywinauto ONLY if the OS is Windows
-# (Otherwise, it will crash your Mac when trying to test the UI!)
 try:
     if platform.system() == "Windows":
         from pywinauto import Application
@@ -24,9 +25,13 @@ class LegacyAutomationBot(ctk.CTk):
         super().__init__()
 
         # Window Configuration
-        self.title("Practice Management Bot")
-        self.geometry(f"{600}x{500}")
+        self.title("Practice Management Bot PRO")
+        self.geometry(f"{600}x{650}")  # Increased height for settings
         self.resizable(False, False)
+
+        # Settings Persistence
+        self.config_file = "config.json"
+        self.app_path = self.load_config()
 
         # ------------------ UI Layout ------------------
         # Header Label
@@ -64,6 +69,26 @@ class LegacyAutomationBot(ctk.CTk):
         self.status_label = ctk.CTkLabel(self.status_frame, text="Status: Ready", font=ctk.CTkFont(size=14), text_color="limegreen")
         self.status_label.pack(pady=20, padx=10)
 
+        # --- SETTINGS SECTION ---
+        self.settings_frame = ctk.CTkFrame(self)
+        self.settings_frame.pack(pady=10, padx=20, fill="x")
+
+        self.path_label = ctk.CTkLabel(self.settings_frame, text="Target Application Path:", font=ctk.CTkFont(weight="bold"))
+        self.path_label.pack(pady=(10, 0), padx=10)
+
+        self.path_display = ctk.CTkEntry(self.settings_frame, width=400)
+        self.path_display.pack(pady=5, padx=10)
+        self.path_display.insert(0, self.app_path)
+        self.path_display.configure(state="disabled")
+
+        self.browse_btn = ctk.CTkButton(
+            self.settings_frame, 
+            text="📁 Select App Executable", 
+            command=self.browse_app_path,
+            fg_color="#444", hover_color="#555"
+        )
+        self.browse_btn.pack(pady=(0, 10))
+
         # Action Buttons (PyWinAuto & PyAutoGUI)
         self.button_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.button_frame.pack(pady=(10, 20), padx=20, fill="x")
@@ -95,10 +120,41 @@ class LegacyAutomationBot(ctk.CTk):
     def disable_buttons(self):
         self.after(0, lambda: self.pywin_btn.configure(state="disabled"))
         self.after(0, lambda: self.pyauto_btn.configure(state="disabled"))
+        self.after(0, lambda: self.browse_btn.configure(state="disabled"))
         
     def enable_buttons(self):
         self.after(0, lambda: self.pywin_btn.configure(state="normal"))
         self.after(0, lambda: self.pyauto_btn.configure(state="normal"))
+        self.after(0, lambda: self.browse_btn.configure(state="normal"))
+
+    # ------------------ Config Persistence ------------------
+    def load_config(self):
+        if os.path.exists(self.config_file):
+            try:
+                with open(self.config_file, "r") as f:
+                    data = json.load(f)
+                    return data.get("app_path", "winword")
+            except:
+                return "winword"
+        return "winword"
+
+    def save_config(self):
+        with open(self.config_file, "w") as f:
+            json.dump({"app_path": self.app_path}, f)
+
+    def browse_app_path(self):
+        file_path = filedialog.askopenfilename(
+            title="Select Application Executable",
+            filetypes=[("Executable Files", "*.exe"), ("All Files", "*.*")]
+        )
+        if file_path:
+            self.app_path = file_path
+            self.path_display.configure(state="normal")
+            self.path_display.delete(0, "end")
+            self.path_display.insert(0, self.app_path)
+            self.path_display.configure(state="disabled")
+            self.save_config()
+            self.update_status(f"App Path Updated: {os.path.basename(file_path)}", color="cyan")
 
     # ------------------ PyWinAuto Logic (The Best Tool) ------------------
     def start_pywinauto_thread(self):
@@ -114,19 +170,26 @@ class LegacyAutomationBot(ctk.CTk):
              return
 
         try:
-            self.update_status("Launching Microsoft Word...", color="yellow")
+            app_name = os.path.basename(self.app_path)
+            self.update_status(f"Launching {app_name}...", color="yellow")
             
-            # Start Word Process
-            import subprocess
-            subprocess.Popen(["cmd", "/c", "start winword"], shell=True)
-            self.update_status("Waiting for Word splash screen...", color="yellow")
+            # Start User Selected Process
+            if self.app_path == "winword":
+                subprocess.Popen(["cmd", "/c", "start winword"], shell=True)
+            else:
+                subprocess.Popen([self.app_path])
+
+            self.update_status("Waiting for application to load...", color="yellow")
             time.sleep(7)
             
-            # Connect to the winword process
+            # Connect to the process
             try:
-                app = Application(backend="uia").connect(path="winword.exe", timeout=10)
+                if self.app_path == "winword":
+                    app = Application(backend="uia").connect(path="winword.exe", timeout=10)
+                else:
+                    app = Application(backend="uia").connect(path=self.app_path, timeout=10)
             except Exception:
-                app = Application(backend="uia").connect(title_re=".*Word.*", timeout=10)
+                app = Application(backend="uia").connect(title_re=f".*{app_name.split('.')[0]}.*", timeout=10)
 
             # Bring whichever Word Window just launched to the Front
             self.update_status("Finding active Word window...", color="yellow")
@@ -184,29 +247,34 @@ class LegacyAutomationBot(ctk.CTk):
     def run_pyautogui(self):
         try:
             self.update_status("Launching App via Start Menu...", color="yellow")
+            app_name = os.path.basename(self.app_path)
+            
             if platform.system() == "Windows":
                  pyautogui.hotkey('win', 'r')
                  time.sleep(1)
-                 # pyautogui.typewrite(r'C:\Program Files\PracticeApp\app.exe')
-                 pyautogui.typewrite('winword')
+                 # Use the user-defined path or winword
+                 target = self.app_path if self.app_path != "winword" else "winword"
+                 pyautogui.typewrite(target)
                  pyautogui.press('enter')
             elif platform.system() == "Darwin":
-                 # Use AppleScript to forcibly bring Microsoft Word to the front
-                 self.update_status("Opening/Focusing Microsoft Word...", color="yellow")
-                 os.system("open -a 'Microsoft Word'")
+                 # For Mac, we use the selected path or default to Word
+                 target_name = app_name if self.app_path != "winword" else "Microsoft Word"
+                 self.update_status(f"Opening/Focusing {target_name}...", color="yellow")
+                 os.system(f"open -a '{target_name}'")
                  time.sleep(1)
-                 os.system("osascript -e 'tell application \"Microsoft Word\" to activate'")
+                 os.system(f"osascript -e 'tell application \"{target_name}\" to activate'")
                  time.sleep(2)
                  
-            self.update_status("Waiting 6s for Word to load...", color="yellow")
+            self.update_status(f"Waiting for {app_name} to load...", color="yellow")
             time.sleep(6) 
             
-            self.update_status("Selecting Blank Document...", color="yellow")
+            self.update_status("Interacting with New Document...", color="yellow")
             if platform.system() == "Windows":
                  pyautogui.press('enter')
             elif platform.system() == "Darwin":
-                 # Focus Word one more time right before opening a document
-                 os.system("osascript -e 'tell application \"Microsoft Word\" to activate'")
+                 # Focus app one more time right before opening a document
+                 target_name = app_name if self.app_path != "winword" else "Microsoft Word"
+                 os.system(f"osascript -e 'tell application \"{target_name}\" to activate'")
                  pyautogui.hotkey('command', 'n')
             time.sleep(2)
 
