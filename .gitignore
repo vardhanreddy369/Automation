@@ -1,0 +1,15 @@
+# Python environments
+venv/
+env/
+.env
+
+# MacOS
+.DS_Store
+
+# Build files (from PyInstaller)
+build/
+dist/
+*.spec
+
+# Generated Docs
+*.docx
