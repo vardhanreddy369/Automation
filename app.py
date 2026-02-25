@@ -113,49 +113,48 @@ class LegacyAutomationBot(ctk.CTk):
              return
 
         try:
-            self.update_status("Starting Microsoft Word (PyWinAuto)...", color="yellow")
+            self.update_status("Launching Microsoft Word...", color="yellow")
             
-            # Start Word
+            # Start Word Process
             import subprocess
             subprocess.Popen(["cmd", "/c", "start winword"], shell=True)
-            self.update_status("Waiting 6s for Word splash screen...", color="yellow")
-            time.sleep(6)
+            self.update_status("Waiting for Word splash screen...", color="yellow")
+            time.sleep(7)
             
-            # Step 1: Connect to the Word process
-            # We use 'uia' backend for modern Office apps
+            # Connect to the winword process
             try:
-                # We specifically connect to the active instance of winword.exe
+                # Backend="uia" is crucial for modern Windows/Office apps
                 app = Application(backend="uia").connect(path="winword.exe", timeout=10)
-            except:
-                # Fallback connection method
+            except Exception:
+                # Fallback if path connection fails
                 app = Application(backend="uia").connect(title_re=".*Word.*", timeout=10)
 
-            # Step 2: Handle the Home Screen and Create Blank Document
-            # To handle multiple Word windows, we use 'top_window()' or 'found_index=0' 
-            # to pick the one currently on top.
-            self.update_status("Selecting Word Window...", color="yellow")
+            # Bring whichever Word Window just launched to the Front
+            self.update_status("Finding active Word window...", color="yellow")
             main_window = app.top_window()
             main_window.set_focus()
             
-            self.update_status("Opening Blank Document...", color="yellow")
+            # Step 2: Create the Blank Document
+            self.update_status("Selecting 'Blank Document'...", color="yellow")
             pyautogui.press('enter')
-            time.sleep(3)
+            time.sleep(4)
 
-            # Step 3: Connect to the NEW Document that just opened
-            # We refresh the reference to grab whichever Word window is now on top
-            self.update_status("Finalizing Document Connection...", color="yellow")
+            # Step 3: BRUTE FORCE FOCUS (Ensure we are typing in the new doc)
+            self.update_status("Focusing newest document...", color="yellow")
             doc_window = app.top_window()
             doc_window.set_focus()
+            time.sleep(1)
             
             self.update_status(f"Executing Visual Typing...", color="yellow")
             
-            # Use 'type_keys' on the active document window
-            doc_text = f"Automated Patient Entry (Pro Mode)\nFirst Name: {fname}\nLast Name: {lname}"
-            doc_window.type_keys(doc_text, with_spaces=True)
+            # We use 'pyautogui.write' for actually typing. 
+            # It's MUCH more reliable than 'type_keys' on Windows 11's modern UI.
+            typing_text = f"Automated Patient Entry (Pro Mode)\nFirst Name: {fname}\nLast Name: {lname}"
+            pyautogui.write(typing_text, interval=0.05)
             
-            self.update_status("Automation Cycle Complete! ✅", color="limegreen")
+            self.update_status("Complete! ✨ Check Microsoft Word.", color="limegreen")
         except Exception as e:
-            self.update_status(f"PyWinAuto Error: {e}", color="red")
+            self.update_status(f"Execution Error: {e}", color="red")
         finally:
             self.enable_buttons()
 
