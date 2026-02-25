@@ -115,26 +115,39 @@ class LegacyAutomationBot(ctk.CTk):
         try:
             self.update_status("Starting Microsoft Word (PyWinAuto)...", color="yellow")
             
-            # Re-routed to test on Microsoft Word as requested by user
-            os.system("start winword")
+            # Use os.startfile for winword on Windows for better integration
+            import subprocess
+            subprocess.Popen(["cmd", "/c", "start winword"], shell=True)
             self.update_status("Waiting 6s for Word splash screen...", color="yellow")
             time.sleep(6)
             
-            # Bypassing the Word Home Screen to open a Blank Document
+            # Step 1: Ensure Word is the active focus
+            # Connect specifically to the running winword process to avoid searching all windows
+            try:
+                app = Application(backend="uia").connect(path="winword.exe", timeout=10)
+            except:
+                # Fallback if path doesn't work well on some systems
+                app = Application(backend="uia").connect(title_re=".*Word.*", timeout=10)
+
+            # Step 2: Bypassing the Word Home Screen to open a Blank Document
             self.update_status("Creating Blank Document...", color="yellow")
+            # We specifically target the 'top_window' and ensure it's visible
+            main_window = app.window(title_re=".*Word.*", visible_only=True, top_level_only=True)
+            main_window.set_focus()
             pyautogui.press('enter')
-            time.sleep(2)
+            time.sleep(3)
 
             self.update_status("Connecting to Word Document...", color="yellow")
-            # Microsoft Office apps require the modern 'uia' backend
-            app = Application(backend="uia").connect(title_re=".*Word.*", timeout=10)
-            window = app.top_window()
+            
+            # Re-grab the now-active document window
+            doc_window = app.window(title_re=".*Word.*", visible_only=True, top_level_only=True)
+            doc_window.set_focus()
             
             self.update_status(f"Typing Patient Data...", color="yellow")
             
             # Typing directly into the Word document window
             doc_text = f"Automated Patient Entry test!\nFirst Name: {fname}\nLast Name: {lname}"
-            window.type_keys(doc_text, with_spaces=True)
+            doc_window.type_keys(doc_text, with_spaces=True)
             
             self.update_status("Native UI Automation Complete! ✅", color="limegreen")
         except Exception as e:
