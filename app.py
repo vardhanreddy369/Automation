@@ -157,10 +157,12 @@ class LegacyAutomationBot(ctk.CTk):
                  pyautogui.typewrite('winword')
                  pyautogui.press('enter')
             elif platform.system() == "Darwin":
-                 pyautogui.hotkey('command', 'space')
+                 # Use AppleScript to forcibly bring Microsoft Word to the front
+                 self.update_status("Opening/Focusing Microsoft Word...", color="yellow")
+                 os.system("open -a 'Microsoft Word'")
                  time.sleep(1)
-                 pyautogui.typewrite('Microsoft Word')
-                 pyautogui.press('enter')
+                 os.system("osascript -e 'tell application \"Microsoft Word\" to activate'")
+                 time.sleep(2)
                  
             self.update_status("Waiting 6s for Word to load...", color="yellow")
             time.sleep(6) 
@@ -169,6 +171,8 @@ class LegacyAutomationBot(ctk.CTk):
             if platform.system() == "Windows":
                  pyautogui.press('enter')
             elif platform.system() == "Darwin":
+                 # Focus Word one more time right before opening a document
+                 os.system("osascript -e 'tell application \"Microsoft Word\" to activate'")
                  pyautogui.hotkey('command', 'n')
             time.sleep(2)
 
