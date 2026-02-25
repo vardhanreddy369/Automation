@@ -1,149 +1,132 @@
 import customtkinter as ctk
-import tkinter.messagebox
-import tkinter.filedialog
-from docx import Document
+import pyautogui
+import time
+import threading
 import os
-from datetime import datetime
+import platform
+import subprocess
 
 # Set the appearance and color theme
-ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
-ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+ctk.set_appearance_mode("Dark")
+ctk.set_default_color_theme("blue")
 
-class App(ctk.CTk):
+class AutomationAgent(ctk.CTk):
     def __init__(self):
         super().__init__()
 
         # Window Configuration
-        self.title("Document Generator Pro")
-        self.geometry(f"{600}x{500}")
+        self.title("Visible Word Automation Bot")
+        self.geometry(f"{600}x{400}")
         self.resizable(False, False)
-        self.last_saved_dir = os.path.expanduser("~/Documents") # Ensure a safe default path
 
         # ------------------ UI Layout ------------------
-
         # Header Label
-        self.header_label = ctk.CTkLabel(self, text="Create a New Word Document", font=ctk.CTkFont(size=24, weight="bold"))
+        self.header_label = ctk.CTkLabel(self, text="🤖 Live Bot Automation", font=ctk.CTkFont(size=24, weight="bold"))
         self.header_label.pack(pady=(20, 10))
 
-        # Title Input
-        self.title_frame = ctk.CTkFrame(self)
-        self.title_frame.pack(pady=10, padx=20, fill="x")
-        
-        self.doc_title_label = ctk.CTkLabel(self.title_frame, text="Document Title:")
-        self.doc_title_label.pack(side="left", padx=10)
-        
-        self.doc_title_entry = ctk.CTkEntry(self.title_frame, placeholder_text="Enter the main heading...", width=300)
-        self.doc_title_entry.pack(side="left", padx=10, fill="x", expand=True)
+        # Instructions
+        self.instructions = ctk.CTkLabel(self, text="This agent will take control of your mouse and keyboard\nto visually open Word and type the text below.", text_color="gray")
+        self.instructions.pack(pady=(0, 10))
 
-        # Content Input
-        self.content_frame = ctk.CTkFrame(self)
-        self.content_frame.pack(pady=10, padx=20, fill="both", expand=True)
+        # Text Input
+        self.input_frame = ctk.CTkFrame(self)
+        self.input_frame.pack(pady=10, padx=20, fill="x")
         
-        self.content_label = ctk.CTkLabel(self.content_frame, text="Document Body Content:")
-        self.content_label.pack(anchor="w", padx=10, pady=(10, 0))
+        self.doc_text_label = ctk.CTkLabel(self.input_frame, text="Text to Type:")
+        self.doc_text_label.pack(side="left", padx=10, pady=10)
         
-        self.content_textbox = ctk.CTkTextbox(self.content_frame, height=150)
-        self.content_textbox.pack(padx=10, pady=10, fill="both", expand=True)
+        self.doc_text_entry = ctk.CTkEntry(self.input_frame, placeholder_text="Type something here...", width=350)
+        self.doc_text_entry.pack(side="left", padx=10, pady=10, fill="x", expand=True)
+        self.doc_text_entry.insert(0, "gey")
 
-        # File Name Input (Now just suggests the name)
-        self.filename_frame = ctk.CTkFrame(self)
-        self.filename_frame.pack(pady=10, padx=20, fill="x")
-        
-        self.filename_label = ctk.CTkLabel(self.filename_frame, text="Suggested File Name:")
-        self.filename_label.pack(side="left", padx=10)
-        
-        self.filename_entry = ctk.CTkEntry(self.filename_frame, placeholder_text="my_document", width=250)
-        self.filename_entry.pack(side="left", padx=10, fill="x", expand=True)
-        self.filename_entry.insert(0, f"Generated_Doc_{datetime.now().strftime('%Y%m%d%H%M%S')}")
+        # Status Display
+        self.status_frame = ctk.CTkFrame(self, fg_color="black")
+        self.status_frame.pack(pady=10, padx=20, fill="both", expand=True)
+
+        self.status_label = ctk.CTkLabel(self.status_frame, text="Status: Idle (Waiting for command)", font=ctk.CTkFont(size=14), text_color="limegreen")
+        self.status_label.pack(pady=30, padx=10)
 
         # Action Buttons
         self.button_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.button_frame.pack(pady=(10, 20), padx=20, fill="x")
 
-        self.generate_btn = ctk.CTkButton(
+        self.start_btn = ctk.CTkButton(
             self.button_frame, 
-            text="✨ Generate Document ✨", 
-            font=ctk.CTkFont(size=15, weight="bold"),
-            height=40,
-            command=self.generate_document
+            text="🚀 Start Live Automation", 
+            font=ctk.CTkFont(size=16, weight="bold"),
+            height=45,
+            command=self.start_automation_safely
         )
-        self.generate_btn.pack(side="left", expand=True, fill="x", padx=10)
-
-        self.open_btn = ctk.CTkButton(
-            self.button_frame, 
-            text="📂 Open Save Folder", 
-            fg_color="gray",
-            hover_color="darkgray",
-            height=40,
-            command=self.open_folder
-        )
-        self.open_btn.pack(side="right", fill="x", padx=10)
+        self.start_btn.pack(side="bottom", expand=True, fill="x", padx=10)
 
     # ------------------ Action Logic ------------------
+    def update_status(self, text, color="limegreen"):
+        # We use 'after' to safely update Tkinter UI from a background thread
+        self.after(0, lambda: self.status_label.configure(text=f"Status: {text}", text_color=color))
 
-    def generate_document(self):
-        title = self.doc_title_entry.get().strip()
-        content = self.content_textbox.get("1.0", "end-1c").strip()
-        suggested_filename = self.filename_entry.get().strip()
+    def enable_button(self, text="🚀 Start Live Automation"):
+        self.after(0, lambda: self.start_btn.configure(state="normal", text=text))
 
-        if not title and not content:
-            tkinter.messagebox.showerror("Error", "Please provide a Title or Content for the document.")
-            return
+    def start_automation_safely(self):
+        text_to_type = self.doc_text_entry.get()
+        if not text_to_type.strip():
+             self.update_status("Error: Please provide text to type.", color="red")
+             return
 
-        if not suggested_filename:
-             suggested_filename = f"Generated_Doc_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-
-        if not suggested_filename.endswith(".docx"):
-            suggested_filename += ".docx"
-
-        # Ask the user where to save the file
-        save_path = tkinter.filedialog.asksaveasfilename(
-            title="Save Word Document",
-            initialfile=suggested_filename,
-            initialdir=self.last_saved_dir,
-            defaultextension=".docx",
-            filetypes=[("Word Document", "*.docx"), ("All Files", "*.*")]
-        )
+        # Disable button to prevent multiple clicks
+        self.start_btn.configure(state="disabled", text="Running...")
         
-        if not save_path:
-            # User cancelled the save dialog
-            return
+        # Run automation in a separate thread so UI doesn't freeze!
+        threading.Thread(target=self.run_bot_logic, args=(text_to_type,), daemon=True).start()
 
+    def run_bot_logic(self, text_to_type):
         try:
-            doc = Document()
+            self.update_status("Step 1: Opening Microsoft Word...", color="yellow")
             
-            if title:
-                doc.add_heading(title, 0)
-                
-            if content:
-                # Add paragraphs handling simple new lines
-                paragraphs = content.split('\n')
-                for p in paragraphs:
-                    if p.strip(): # Don't add empty stray paragraphs
-                        doc.add_paragraph(p)
+            # Cross-platform Word Launching
+            if platform.system() == "Windows":
+                 # Open Word via Windows Terminal
+                 os.system("start winword")
+                 
+                 self.update_status("Step 2: Waiting for Word to load...", color="yellow")
+                 time.sleep(6) # Wait for splash screen
 
-            # Save the file to the chosen path
-            doc.save(save_path)
+                 self.update_status("Step 3: Creating Blank Document...", color="yellow")
+                 pyautogui.press('enter') # Bypasses 'Home' screen to make a blank doc
+                 time.sleep(2)
+                 
+            elif platform.system() == "Darwin": # Mac
+                 # Open Word via Terminal
+                 subprocess.Popen(["open", "-a", "Microsoft Word"])
+                 
+                 self.update_status("Step 2: Waiting for Word to load...", color="yellow")
+                 time.sleep(4)
+                 
+                 self.update_status("Step 3: Creating Blank Document...", color="yellow")
+                 pyautogui.hotkey('command', 'n') # Opens new doc from gallery
+                 time.sleep(2)
+                 
+            else:
+                 self.update_status("OS Not Supported. Try Windows or Mac.", color="red")
+                 self.enable_button()
+                 return
+                 
+            self.update_status("Step 4: Executing visual typing...", color="cyan")
             
-            # Remember the directory for next time
-            self.last_saved_dir = os.path.dirname(save_path)
-            
-            tkinter.messagebox.showinfo("Success", f"Document successfully generated!\nSaved to:\n{save_path}")
-            
+            # The magic: physically typing it keystroke by keystroke
+            # `interval` determines the speed of the typing (e.g. 0.1 secs between strokes)
+            pyautogui.write(text_to_type, interval=0.15)
+
+            # Re-enable button
+            self.update_status("Finished: Automation Sequence Complete! ✨", color="limegreen")
+            self.enable_button()
+
         except Exception as e:
-            tkinter.messagebox.showerror("Generation Error", f"An error occurred while generating the document:\n{e}")
-
-    def open_folder(self):
-        import platform
-        import subprocess
-        # Open the directory where the user last saved a file (or Documents by default)
-        if platform.system() == "Windows":
-            os.startfile(self.last_saved_dir)
-        elif platform.system() == "Darwin":
-            subprocess.Popen(["open", self.last_saved_dir])
-        else:
-            subprocess.Popen(["xdg-open", self.last_saved_dir])
+            self.update_status(f"Error during sequence:\n{e}", color="red")
+            self.enable_button()
 
 if __name__ == "__main__":
-    app = App()
+    # Safety feature for PyAutoGUI (Move mouse rapidly to any corner of screen to Force Abort)
+    pyautogui.FAILSAFE = True
+    app = AutomationAgent()
     app.mainloop()
