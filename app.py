@@ -119,15 +119,14 @@ class LegacyAutomationBot(ctk.CTk):
             # app = Application(backend="win32").start(r"C:\Program Files\PracticeApp\app.exe")
             # window = app.main_window()
 
-            # --- TESTING WORKAROUND FOR WINDOWS 11 ---
-            # Windows 11 broke Notepad for legacy testing (it's a modern UWP app now).
-            # So, we test on WordPad instead, which is a perfect 1-to-1 simulation 
-            # of your legacy PracticeApp!
-            os.system("start wordpad")
+            # --- TESTING FOR WINDOWS 11 NOTEPAD (UWP) ---
+            # Suman specifically requested Notepad. Since Windows 11 Notepad is a 
+            # modern UWP application, we must use the `uia` backend instead of `win32`.
+            os.system("start notepad")
             time.sleep(2)
             
-            # Connect to WordPad
-            app = Application(backend="win32").connect(title_re=".*WordPad.*", timeout=10)
+            # Connect to Notepad using the modern UIA backend
+            app = Application(backend="uia").connect(title_re=".*Notepad.*", timeout=10)
 
             self.update_status("Connecting to Main Window...", color="yellow")
             window = app.top_window()
@@ -138,6 +137,7 @@ class LegacyAutomationBot(ctk.CTk):
             self.update_status(f"Typing Data: {fname} {lname}...", color="yellow")
             
             # Send keys to our connected test window
+            # We use `type_keys` correctly for the UIA backend
             window.type_keys(f"PyWinAuto Test Successful! Patient: {fname} {lname} ", with_spaces=True)
             
             self.update_status("Clicking 'Save'...", color="yellow")
