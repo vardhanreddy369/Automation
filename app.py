@@ -119,13 +119,15 @@ class LegacyAutomationBot(ctk.CTk):
             # app = Application(backend="win32").start(r"C:\Program Files\PracticeApp\app.exe")
             # window = app.main_window()
 
-            # --- TESTING WORKAROUND FOR WINDOWS 11 NOTEPAD ---
-            # Windows 11 intercepts "notepad.exe" and changes its Process ID instantly,
-            # which breaks pywinauto's default tracking. We fix this by opening it via the 
-            # terminal and connecting to the window explicitly by its Name!
-            os.system("start notepad")
+            # --- TESTING WORKAROUND FOR WINDOWS 11 ---
+            # Windows 11 broke Notepad for legacy testing (it's a modern UWP app now).
+            # So, we test on WordPad instead, which is a perfect 1-to-1 simulation 
+            # of your legacy PracticeApp!
+            os.system("start wordpad")
             time.sleep(2)
-            app = Application(backend="win32").connect(title_re=".*Notepad.*", timeout=10)
+            
+            # Connect to WordPad
+            app = Application(backend="win32").connect(title_re=".*WordPad.*", timeout=10)
 
             self.update_status("Connecting to Main Window...", color="yellow")
             window = app.top_window()
@@ -134,8 +136,6 @@ class LegacyAutomationBot(ctk.CTk):
             # window.menu_select("File -> New Patient")
             
             self.update_status(f"Typing Data: {fname} {lname}...", color="yellow")
-            # window['First Name'].type_keys(fname)
-            # window['Last Name'].type_keys(lname)
             
             # Send keys to our connected test window
             window.type_keys(f"PyWinAuto Test Successful! Patient: {fname} {lname} ", with_spaces=True)
