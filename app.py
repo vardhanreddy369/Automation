@@ -121,15 +121,18 @@ class LegacyAutomationBot(ctk.CTk):
 
             self.update_status("Connecting to Main Window...", color="yellow")
             # window = app.main_window()
-            window = app.UntitledNotepad
-
+            # Windows 11 Notepad uses a new architecture, so we just grab the top window
+            window = app.top_window()
+            
             self.update_status("Clicking 'File -> New Patient' (simulated)...", color="yellow")
             # window.menu_select("File -> New Patient")
             
             self.update_status(f"Typing Data: {fname} {lname}...", color="yellow")
             # window['First Name'].type_keys(fname)
             # window['Last Name'].type_keys(lname)
-            window.Edit.type_keys(f"New Patient Added:\nFirst Name: {fname}\nLast Name: {lname}", with_spaces=True)
+            
+            # Use general type_keys for modern apps (like Win11 Notepad)
+            window.type_keys(f"New Patient Added First Name: {fname} Last Name: {lname} ", with_spaces=True)
             
             self.update_status("Clicking 'Save'...", color="yellow")
             # window['Save'].click()
