@@ -123,10 +123,8 @@ class LegacyAutomationBot(ctk.CTk):
             
             # Connect to the winword process
             try:
-                # Backend="uia" is crucial for modern Windows/Office apps
                 app = Application(backend="uia").connect(path="winword.exe", timeout=10)
             except Exception:
-                # Fallback if path connection fails
                 app = Application(backend="uia").connect(title_re=".*Word.*", timeout=10)
 
             # Bring whichever Word Window just launched to the Front
@@ -147,12 +145,31 @@ class LegacyAutomationBot(ctk.CTk):
             
             self.update_status(f"Executing Visual Typing...", color="yellow")
             
-            # We use 'pyautogui.write' for actually typing. 
-            # It's MUCH more reliable than 'type_keys' on Windows 11's modern UI.
-            typing_text = f"Automated Patient Entry (Pro Mode)\nFirst Name: {fname}\nLast Name: {lname}"
+            # Typing the patient data
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            typing_text = f"Automated Patient Entry (Pro Mode)\nFirst Name: {fname}\nLast Name: {lname}\nEntry Time: {timestamp}"
             pyautogui.write(typing_text, interval=0.05)
+            time.sleep(1)
+
+            # --- STEP 4: AUTOMATED SAVE SEQUENCE ---
+            self.update_status("Saving Document...", color="cyan")
+            # Open Save As dialog (F12 is the fastest way in Word)
+            pyautogui.press('f12')
+            time.sleep(2)
             
-            self.update_status("Complete! ✨ Check Microsoft Word.", color="limegreen")
+            # Type a unique filename based on the patient name
+            safe_fname = "".join(x for x in fname if x.isalnum())
+            safe_lname = "".join(x for x in lname if x.isalnum())
+            filename = f"Patient_{safe_fname}_{safe_lname}_{timestamp}"
+            
+            pyautogui.write(filename)
+            time.sleep(1)
+            pyautogui.press('enter')
+            
+            self.update_status(f"Saved: {filename}.docx ✅", color="limegreen")
+            time.sleep(2)
+            
+            self.update_status("Automation Cycle Complete! ✨", color="limegreen")
         except Exception as e:
             self.update_status(f"Execution Error: {e}", color="red")
         finally:
