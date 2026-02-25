@@ -114,14 +114,20 @@ class LegacyAutomationBot(ctk.CTk):
 
         try:
             self.update_status("Starting PracticeApp (PyWinAuto)...", color="yellow")
-            # app = Application().start(r"C:\Program Files\PracticeApp\app.exe")
-            # For demonstration, we'll pretend to open Notepad if the real app isn't there
-            app = Application().start("notepad.exe")
+            
+            # THE REAL CODE Suman wants:
+            # app = Application(backend="win32").start(r"C:\Program Files\PracticeApp\app.exe")
+            # window = app.main_window()
+
+            # --- TESTING WORKAROUND FOR WINDOWS 11 NOTEPAD ---
+            # Windows 11 intercepts "notepad.exe" and changes its Process ID instantly,
+            # which breaks pywinauto's default tracking. We fix this by opening it via the 
+            # terminal and connecting to the window explicitly by its Name!
+            os.system("start notepad")
             time.sleep(2)
+            app = Application(backend="win32").connect(title_re=".*Notepad.*", timeout=10)
 
             self.update_status("Connecting to Main Window...", color="yellow")
-            # window = app.main_window()
-            # Windows 11 Notepad uses a new architecture, so we just grab the top window
             window = app.top_window()
             
             self.update_status("Clicking 'File -> New Patient' (simulated)...", color="yellow")
@@ -131,8 +137,8 @@ class LegacyAutomationBot(ctk.CTk):
             # window['First Name'].type_keys(fname)
             # window['Last Name'].type_keys(lname)
             
-            # Use general type_keys for modern apps (like Win11 Notepad)
-            window.type_keys(f"New Patient Added First Name: {fname} Last Name: {lname} ", with_spaces=True)
+            # Send keys to our connected test window
+            window.type_keys(f"PyWinAuto Test Successful! Patient: {fname} {lname} ", with_spaces=True)
             
             self.update_status("Clicking 'Save'...", color="yellow")
             # window['Save'].click()
