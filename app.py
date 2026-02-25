@@ -113,29 +113,29 @@ class LegacyAutomationBot(ctk.CTk):
              return
 
         try:
-            self.update_status("Starting PracticeApp (PyWinAuto)...", color="yellow")
+            self.update_status("Starting Microsoft Word (PyWinAuto)...", color="yellow")
             
-            # THE EXACT CODE SUMAN PROVIDED
-            # This points squarely at the legacy PracticeApp you will test this weekend.
-            app = Application().start(r"C:\Program Files\PracticeApp\app.exe")
-            time.sleep(3) # Wait slightly for older apps to load
+            # Re-routed to test on Microsoft Word as requested by user
+            os.system("start winword")
+            self.update_status("Waiting 6s for Word splash screen...", color="yellow")
+            time.sleep(6)
+            
+            # Bypassing the Word Home Screen to open a Blank Document
+            self.update_status("Creating Blank Document...", color="yellow")
+            pyautogui.press('enter')
+            time.sleep(2)
 
-            self.update_status("Connecting to Main Window...", color="yellow")
-            window = app.main_window()
+            self.update_status("Connecting to Word Document...", color="yellow")
+            # Microsoft Office apps require the modern 'uia' backend
+            app = Application(backend="uia").connect(title_re=".*Word.*", timeout=10)
+            window = app.top_window()
             
-            self.update_status("Clicking 'File -> New Patient' (simulated)...", color="yellow")
-            # In PyWinAuto, menu paths are separated by ->
-            window.menu_select("File -> New Patient")
+            self.update_status(f"Typing Patient Data...", color="yellow")
             
-            self.update_status(f"Typing Data: {fname} {lname}...", color="yellow")
+            # Typing directly into the Word document window
+            doc_text = f"Automated Patient Entry test!\nFirst Name: {fname}\nLast Name: {lname}"
+            window.type_keys(doc_text, with_spaces=True)
             
-            # Type into specific legacy fields Suman identified
-            window['First Name'].type_keys(fname)
-            window['Last Name'].type_keys(lname)
-            
-            self.update_status("Clicking 'Save'...", color="yellow")
-            window['Save'].click()
-
             self.update_status("Native UI Automation Complete! ✅", color="limegreen")
         except Exception as e:
             self.update_status(f"PyWinAuto Error: {e}", color="red")
@@ -154,18 +154,25 @@ class LegacyAutomationBot(ctk.CTk):
                  pyautogui.hotkey('win', 'r')
                  time.sleep(1)
                  # pyautogui.typewrite(r'C:\Program Files\PracticeApp\app.exe')
-                 pyautogui.typewrite('notepad.exe')
+                 pyautogui.typewrite('winword')
                  pyautogui.press('enter')
             elif platform.system() == "Darwin":
                  pyautogui.hotkey('command', 'space')
                  time.sleep(1)
-                 pyautogui.typewrite('TextEdit')
+                 pyautogui.typewrite('Microsoft Word')
                  pyautogui.press('enter')
                  
-            self.update_status("Waiting 3s for app to load...", color="yellow")
-            time.sleep(3) 
+            self.update_status("Waiting 6s for Word to load...", color="yellow")
+            time.sleep(6) 
+            
+            self.update_status("Selecting Blank Document...", color="yellow")
+            if platform.system() == "Windows":
+                 pyautogui.press('enter')
+            elif platform.system() == "Darwin":
+                 pyautogui.hotkey('command', 'n')
+            time.sleep(2)
 
-            self.update_status("Clicking arbitrary coordinates (x=450, y=300)...", color="yellow")
+            self.update_status("Clicking arbitrary start coordinates...", color="yellow")
             pyautogui.click(x=450, y=300)
             time.sleep(1)
 
