@@ -5,6 +5,7 @@ import threading
 import os
 import platform
 import subprocess
+from datetime import datetime
 
 # Securely import pywinauto ONLY if the OS is Windows
 # (Otherwise, it will crash your Mac when trying to test the UI!)
