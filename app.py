@@ -115,33 +115,26 @@ class LegacyAutomationBot(ctk.CTk):
         try:
             self.update_status("Starting PracticeApp (PyWinAuto)...", color="yellow")
             
-            # THE REAL CODE Suman wants:
-            # app = Application(backend="win32").start(r"C:\Program Files\PracticeApp\app.exe")
-            # window = app.main_window()
-
-            # --- TESTING FOR WINDOWS 11 NOTEPAD (UWP) ---
-            # Suman specifically requested Notepad. Since Windows 11 Notepad is a 
-            # modern UWP application, we must use the `uia` backend instead of `win32`.
-            os.system("start notepad")
-            time.sleep(2)
-            
-            # Connect to Notepad using the modern UIA backend
-            app = Application(backend="uia").connect(title_re=".*Notepad.*", timeout=10)
+            # THE EXACT CODE SUMAN PROVIDED
+            # This points squarely at the legacy PracticeApp you will test this weekend.
+            app = Application().start(r"C:\Program Files\PracticeApp\app.exe")
+            time.sleep(3) # Wait slightly for older apps to load
 
             self.update_status("Connecting to Main Window...", color="yellow")
-            window = app.top_window()
+            window = app.main_window()
             
             self.update_status("Clicking 'File -> New Patient' (simulated)...", color="yellow")
-            # window.menu_select("File -> New Patient")
+            # In PyWinAuto, menu paths are separated by ->
+            window.menu_select("File -> New Patient")
             
             self.update_status(f"Typing Data: {fname} {lname}...", color="yellow")
             
-            # Send keys to our connected test window
-            # We use `type_keys` correctly for the UIA backend
-            window.type_keys(f"PyWinAuto Test Successful! Patient: {fname} {lname} ", with_spaces=True)
+            # Type into specific legacy fields Suman identified
+            window['First Name'].type_keys(fname)
+            window['Last Name'].type_keys(lname)
             
             self.update_status("Clicking 'Save'...", color="yellow")
-            # window['Save'].click()
+            window['Save'].click()
 
             self.update_status("Native UI Automation Complete! ✅", color="limegreen")
         except Exception as e:
