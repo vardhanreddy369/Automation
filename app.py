@@ -191,11 +191,50 @@ class LegacyAutomationBot(ctk.CTk):
             except Exception:
                 app = Application(backend="uia").connect(title_re=f".*{app_name.split('.')[0]}.*", timeout=10)
 
-            # Bring whichever Word Window just launched to the Front
-            self.update_status("Finding active Word window...", color="yellow")
+            # Bring whichever Window just launched to the Front
+            self.update_status("Finding active window...", color="yellow")
             main_window = app.top_window()
             main_window.set_focus()
             
+            # --- BRANCH: OPENDENTAL AUTOMATION ---
+            if "opendental" in app_name.lower():
+                self.update_status("Bypassing Open Dental Login...", color="yellow")
+                # Usually pressing Enter bypasses the login for 'Admin' with no password
+                pyautogui.press('enter')
+                time.sleep(6)
+                
+                # Re-grab the main workspace window after login
+                main_window = app.top_window()
+                main_window.set_focus()
+                
+                self.update_status("Opening 'Select Patient'...", color="yellow")
+                # Open Dental shortcut to Select Patient is Ctrl+S
+                pyautogui.hotkey('ctrl', 's')
+                time.sleep(2)
+                
+                self.update_status("Clicking 'Add Pt'...", color="yellow")
+                # Alt+A is the typical hotkey for the 'Add Pt' button in OpenDental
+                pyautogui.hotkey('alt', 'a')
+                time.sleep(2)
+                
+                self.update_status(f"Typing Data: {fname} {lname}...", color="yellow")
+                # Open Dental defaults the cursor to Last Name first, then First Name
+                pyautogui.write(lname, interval=0.05)
+                time.sleep(0.5)
+                pyautogui.press('tab')
+                time.sleep(0.5)
+                pyautogui.write(fname, interval=0.05)
+                time.sleep(1)
+                
+                self.update_status("Saving Patient Profile...", color="yellow")
+                # Press Enter to finalize and save the patient
+                pyautogui.press('enter')
+                time.sleep(2)
+                
+                self.update_status(f"Open Dental Patient Saved! ✅", color="limegreen")
+                return
+            
+            # --- BRANCH: WORD DUMMY AUTOMATION ---
             # Step 2: Create the Blank Document
             self.update_status("Selecting 'Blank Document'...", color="yellow")
             pyautogui.press('enter')
@@ -268,6 +307,40 @@ class LegacyAutomationBot(ctk.CTk):
             self.update_status(f"Waiting for {app_name} to load...", color="yellow")
             time.sleep(6) 
             
+            # --- BRANCH: OPENDENTAL AUTOMATION ---
+            if "opendental" in app_name.lower():
+                self.update_status("Bypassing Open Dental Login...", color="yellow")
+                pyautogui.press('enter')
+                time.sleep(6)
+                
+                self.update_status("Opening 'Select Patient'...", color="yellow")
+                pyautogui.hotkey('ctrl', 's')
+                time.sleep(2)
+                
+                self.update_status("Clicking 'Add Pt'...", color="yellow")
+                pyautogui.hotkey('alt', 'a')
+                time.sleep(2)
+                
+                # We do not use self.fname_entry (won't be available in kwargs here if we run_pyautogui this way)
+                # Wait, run_pyautogui does not have fname/lname parameters in current scope, we should fetch them.
+                fname = self.fname_entry.get()
+                lname = self.lname_entry.get()
+                
+                self.update_status(f"Typing Data: {fname} {lname}...", color="yellow")
+                pyautogui.write(lname, interval=0.05)
+                time.sleep(0.5)
+                pyautogui.press('tab')
+                time.sleep(0.5)
+                pyautogui.write(fname, interval=0.05)
+                time.sleep(1)
+                
+                self.update_status("Saving Patient Profile...", color="yellow")
+                pyautogui.press('enter')
+                time.sleep(2)
+                
+                self.update_status(f"Open Dental Patient Saved! ✅", color="limegreen")
+                return
+
             self.update_status("Interacting with New Document...", color="yellow")
             if platform.system() == "Windows":
                  pyautogui.press('enter')
